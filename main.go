@@ -41,15 +41,22 @@ func main() {
 	quit := false
 	selected := 0
 	windowStart := 0
-	windowSize := 5
+	windowSize := 10
 
 	normalStyle := tcell.StyleDefault
 	boldStyle := tcell.StyleDefault.Bold(true)
 	selectedStyle := tcell.StyleDefault.Background(tcell.ColorBlue).Foreground(tcell.ColorWhite)
 	selectedBoldStyle := selectedStyle.Bold(true)
+	inputStyle := tcell.StyleDefault.Foreground(tcell.ColorGreen)
 
 	draw := func(matches []string, input string, selected, windowStart, windowSize int) {
 		screen.Clear()
+		// Draw input at the top
+		inputPrompt := "search: " + input
+		for i, r := range inputPrompt {
+			screen.SetContent(i, 0, r, nil, inputStyle)
+		}
+		// Draw list starting at row 1
 		end := min(windowStart+windowSize, len(matches))
 		for i := windowStart; i < end; i++ {
 			item := matches[i]
@@ -67,22 +74,22 @@ func main() {
 			if input != "" && start != -1 {
 				// Before match
 				for _, r := range item[:start] {
-					screen.SetContent(col, i-windowStart, r, nil, style)
+					screen.SetContent(col, i-windowStart+1, r, nil, style)
 					col++
 				}
 				// Match in bold
 				for _, r := range item[start : start+len(input)] {
-					screen.SetContent(col, i-windowStart, r, nil, bold)
+					screen.SetContent(col, i-windowStart+1, r, nil, bold)
 					col++
 				}
 				// After match
 				for _, r := range item[start+len(input):] {
-					screen.SetContent(col, i-windowStart, r, nil, style)
+					screen.SetContent(col, i-windowStart+1, r, nil, style)
 					col++
 				}
 			} else {
 				for _, r := range item {
-					screen.SetContent(col, i-windowStart, r, nil, style)
+					screen.SetContent(col, i-windowStart+1, r, nil, style)
 					col++
 				}
 			}
