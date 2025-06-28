@@ -1,33 +1,50 @@
 package git
 
 import (
-	"context"
 	"strings"
 
 	"github.com/samber/lo"
 )
 
-func RemoteBranches(ctx context.Context) ([]string, error) {
-	out, err := execute(ctx, "branch -r --format=%%(refname:short)")
+func ListRemotes() ([]string, error) {
+	out, err := execute("remote")
 	if err != nil {
 		return nil, err
 	}
 
-	return lo.FilterMap(strings.Split(out, "\n"), func(b string, _ int) (string, bool) {
-		if !strings.Contains(b, "/") {
-			return "", false
-		}
-
-		idx := strings.Index(b, "/")
-		if idx == -1 || idx == len(b)-1 {
-			return "", false
-		}
-
-		return b[idx+1:], true
-	}), nil
+	return strings.Split(out, "\n"), nil
 }
 
-func Checkout(ctx context.Context, branch string) error {
-	_, err := execute(ctx, "checkout %v", branch)
-	return err
+func AllBranches() ([]string, error) {
+	remotes, err := ListRemotes()
+	if err != nil {
+		return nil, err
+	}
+
+	out, err := execute("branch -a --format=%%(refname:short)")
+	if err != nil {
+		return nil, err
+	}
+
+	results := strings.Split(out, "\n")
+
+	return lo.Uniq(lo.FilterMap(results, func(b string, _ int) (string, bool) {
+		// Don't include branches that are just the remotes themselves.
+		if lo.Contains(remotes, b) {
+			return "", false
+		}
+
+		// Remove the remote from each branch if it's prefixed with it
+		for _, remote := range remotes {
+			if strings.HasPrefix(b, remote) {
+				return strings.TrimPrefix(b, remote+"/"), true
+			}
+		}
+
+		return b, true
+	})), nil
+}
+
+func Checkout(branch string) error {
+	return executeWithStdout("checkout %v", branch)
 }

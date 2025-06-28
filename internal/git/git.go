@@ -1,9 +1,9 @@
 package git
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -13,8 +13,8 @@ func ValidateGitInstallation() error {
 	return err
 }
 
-func IsGitRepository(ctx context.Context) (bool, error) {
-	res, err := execute(ctx, "rev-parse --is-inside-work-tree")
+func IsGitRepository() (bool, error) {
+	res, err := execute("rev-parse --is-inside-work-tree")
 	if err != nil {
 		return false, err
 	}
@@ -22,14 +22,31 @@ func IsGitRepository(ctx context.Context) (bool, error) {
 	return strings.TrimSpace(res) == "true", nil
 }
 
-func execute(ctx context.Context, format string, args ...any) (string, error) {
+func execute(format string, args ...any) (string, error) {
 	slog.Debug("executing git command", slog.String("command", fmt.Sprintf(format, args...)))
 
 	cmdFormatted := fmt.Sprintf(format, args...)
-	cmd := exec.CommandContext(ctx, "git", strings.Split(cmdFormatted, " ")...)
+	cmd := exec.Command("git", strings.Split(cmdFormatted, " ")...)
 	output, err := cmd.CombinedOutput()
 
 	slog.Debug("git command output", slog.String("command", cmdFormatted), slog.String("output", string(output)))
 
 	return string(output), err
+}
+
+func executeWithStdout(format string, args ...any) error {
+	slog.Debug("executing git command", slog.String("command", fmt.Sprintf(format, args...)))
+
+	cmdFormatted := fmt.Sprintf(format, args...)
+	cmd := exec.Command("git", strings.Split(cmdFormatted, " ")...)
+
+	// Forward output to stdout and stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Run()
+
+	slog.Debug("git command finished", slog.String("command", cmdFormatted), slog.Any("error", err))
+
+	return err
 }

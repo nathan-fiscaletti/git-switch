@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -20,7 +19,27 @@ func min(a, b int) int {
 }
 
 func main() {
-	things, err := git.RemoteBranches(context.Background())
+	inRepo, err := git.IsGitRepository()
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if !inRepo {
+		fmt.Printf("error: %v\n", "not a git repository")
+		os.Exit(1)
+	}
+
+	if len(os.Args) > 1 {
+		err := git.Checkout(os.Args[1])
+		if err != nil {
+			fmt.Printf("error: %v\n", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
+	things, err := git.AllBranches()
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 		os.Exit(1)
@@ -142,7 +161,7 @@ func main() {
 				case tcell.KeyEnter:
 					if len(matches) > 0 {
 						screen.Fini()
-						err := git.Checkout(context.Background(), matches[selected])
+						err := git.Checkout(matches[selected])
 						if err != nil {
 							fmt.Printf("error: %v\n", err)
 							os.Exit(1)
