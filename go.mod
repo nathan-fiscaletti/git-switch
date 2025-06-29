@@ -4,7 +4,9 @@ go 1.24
 
 require (
 	github.com/gdamore/tcell/v2 v2.8.1
+	github.com/kirsle/configdir v0.0.0-20170128060238-e45d2f54772f
 	github.com/samber/lo v1.51.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (

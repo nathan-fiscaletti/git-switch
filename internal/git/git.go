@@ -1,11 +1,16 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
+)
+
+var (
+	ErrNotARepository = errors.New("not a git repository")
 )
 
 func ValidateGitInstallation() error {

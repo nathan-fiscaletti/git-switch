@@ -4,21 +4,20 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/nathan-fiscaletti/git-switch/internal/git"
+	"github.com/nathan-fiscaletti/git-switch/internal/storage"
+	"github.com/nathan-fiscaletti/git-switch/pkg"
 	"github.com/samber/lo"
 )
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func main() {
+	err := git.ValidateGitInstallation()
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+		os.Exit(1)
+	}
+
 	inRepo, err := git.IsGitRepository()
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
@@ -31,176 +30,100 @@ func main() {
 	}
 
 	if len(os.Args) > 1 {
-		err := git.Checkout(os.Args[1])
+		cmd := os.Args[1]
+		args := os.Args[2:]
+
+		switch cmd {
+		case "-x":
+			switch args[0] {
+			case "focus":
+				currentBranch, err := git.GetCurrentBranch()
+				if err != nil {
+					fmt.Printf("error: %v\n", err)
+					os.Exit(1)
+				}
+
+				_, err = storage.Focus(currentBranch)
+				if err != nil {
+					fmt.Printf("error: %v\n", err)
+					os.Exit(1)
+				}
+				os.Exit(0)
+			case "unfocus":
+				currentBranch, err := git.GetCurrentBranch()
+				if err != nil {
+					fmt.Printf("error: %v\n", err)
+					os.Exit(1)
+				}
+
+				_, err = storage.Unfocus(currentBranch)
+				if err != nil {
+					fmt.Printf("error: %v\n", err)
+					os.Exit(1)
+				}
+				os.Exit(0)
+			default:
+				println("unknown command: %v", args[0])
+				os.Exit(1)
+			}
+		default:
+			err := git.ExecuteCheckout(strings.Join(os.Args[1:], " "))
+			if err != nil {
+				fmt.Printf("error: %v\n", err)
+				os.Exit(1)
+			}
+			os.Exit(0)
+		}
+	}
+
+	branches, err := git.AllBranches()
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+		os.Exit(1)
+	}
+
+	cfg, err := storage.GetConfig()
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+		os.Exit(1)
+	}
+
+	repositoryPath, err := os.Getwd()
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+		os.Exit(1)
+	}
+
+	focusBranches := []string{}
+
+	if repo, repoFound := lo.Find(cfg.Repositories, func(r storage.RepositoryConfig) bool {
+		return r.Path == repositoryPath
+	}); repoFound {
+		focusBranches = repo.FocusBranches
+	}
+
+	branchSelector, err := pkg.NewBranchSelector(pkg.BranchSelectorArguments{
+		Branches:      branches,
+		WindowSize:    10,
+		SearchLabel:   "search branch",
+		FocusBranches: focusBranches,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	b, err := branchSelector.PickBranch()
+	if err != nil {
+		panic(err)
+	}
+
+	if len(b) > 0 {
+		err = git.Checkout(b)
 		if err != nil {
 			fmt.Printf("error: %v\n", err)
 			os.Exit(1)
 		}
-		os.Exit(0)
 	}
 
-	things, err := git.AllBranches()
-	if err != nil {
-		fmt.Printf("error: %v\n", err)
-		os.Exit(1)
-	}
-
-	screen, err := tcell.NewScreen()
-	if err != nil {
-		fmt.Printf("error: %v\n", err)
-		os.Exit(1)
-	}
-	if err := screen.Init(); err != nil {
-		fmt.Printf("error: %v\n", err)
-		os.Exit(1)
-	}
-	defer screen.Fini()
-
-	input := ""
-	quit := false
-	selected := 0
-	windowStart := 0
-	windowSize := 10
-
-	normalStyle := tcell.StyleDefault
-	boldStyle := tcell.StyleDefault.Bold(true)
-	selectedStyle := tcell.StyleDefault.Background(tcell.ColorBlue).Foreground(tcell.ColorWhite)
-	selectedBoldStyle := selectedStyle.Bold(true)
-	inputStyle := tcell.StyleDefault.Foreground(tcell.ColorGreen)
-
-	draw := func(matches []string, input string, selected, windowStart, windowSize int) {
-		screen.Clear()
-		// Draw input at the top
-		inputPrompt := "search: " + input
-		for i, r := range inputPrompt {
-			screen.SetContent(i, 0, r, nil, inputStyle)
-		}
-		// Draw list starting at row 1
-		end := min(windowStart+windowSize, len(matches))
-		for i := windowStart; i < end; i++ {
-			item := matches[i]
-			lowerItem := strings.ToLower(item)
-			lowerInput := strings.ToLower(input)
-			start := strings.Index(lowerItem, lowerInput)
-			col := 0
-			isSelected := i == selected
-			style := normalStyle
-			bold := boldStyle
-			if isSelected {
-				style = selectedStyle
-				bold = selectedBoldStyle
-			}
-			if input != "" && start != -1 {
-				// Before match
-				for _, r := range item[:start] {
-					screen.SetContent(col, i-windowStart+1, r, nil, style)
-					col++
-				}
-				// Match in bold
-				for _, r := range item[start : start+len(input)] {
-					screen.SetContent(col, i-windowStart+1, r, nil, bold)
-					col++
-				}
-				// After match
-				for _, r := range item[start+len(input):] {
-					screen.SetContent(col, i-windowStart+1, r, nil, style)
-					col++
-				}
-			} else {
-				for _, r := range item {
-					screen.SetContent(col, i-windowStart+1, r, nil, style)
-					col++
-				}
-			}
-		}
-		screen.Show()
-	}
-
-	filter := func(input string) []string {
-		if input == "" {
-			return things
-		}
-		return lo.Filter(things, func(s string, _ int) bool {
-			return strings.Contains(strings.ToLower(s), strings.ToLower(input))
-		})
-	}
-
-	matches := filter(input)
-	draw(matches, input, selected, windowStart, windowSize)
-
-	go func() {
-		for !quit {
-			ev := screen.PollEvent()
-			switch ev := ev.(type) {
-			case *tcell.EventKey:
-				switch ev.Key() {
-				case tcell.KeyEsc, tcell.KeyCtrlC:
-					quit = true
-					screen.Fini()
-					return
-				case tcell.KeyBackspace, tcell.KeyBackspace2:
-					if len(input) > 0 {
-						input = input[:len(input)-1]
-						selected = 0
-						windowStart = 0
-					}
-				case tcell.KeyUp:
-					if selected > 0 {
-						selected--
-						if selected < windowStart {
-							windowStart--
-						}
-					}
-				case tcell.KeyDown:
-					if selected < len(matches)-1 {
-						selected++
-						if selected >= windowStart+windowSize {
-							windowStart++
-						}
-					}
-				case tcell.KeyEnter:
-					if len(matches) > 0 {
-						screen.Fini()
-						err := git.Checkout(matches[selected])
-						if err != nil {
-							fmt.Printf("error: %v\n", err)
-							os.Exit(1)
-						}
-						os.Exit(0)
-					}
-				default:
-					if ev.Rune() != 0 {
-						input += string(ev.Rune())
-						selected = 0
-						windowStart = 0
-					}
-				}
-				matches = filter(input)
-				if selected >= len(matches) {
-					selected = len(matches) - 1
-				}
-				if selected < 0 {
-					selected = 0
-				}
-				if windowStart > selected {
-					windowStart = selected
-				}
-				if windowStart+windowSize > len(matches) {
-					windowStart = max(0, len(matches)-windowSize)
-				}
-				draw(matches, input, selected, windowStart, windowSize)
-			}
-		}
-	}()
-
-	for !quit {
-		time.Sleep(100 * time.Millisecond)
-	}
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
+	os.Exit(0)
 }
