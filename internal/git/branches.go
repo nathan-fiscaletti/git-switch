@@ -1,6 +1,7 @@
 package git
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/samber/lo"
@@ -47,4 +48,17 @@ func AllBranches() ([]string, error) {
 
 func Checkout(branch string) error {
 	return executeWithStdout("checkout %v", branch)
+}
+
+func ExecuteCheckout(cmd string, args ...any) error {
+	return executeWithStdout(fmt.Sprintf("checkout %v", cmd), args...)
+}
+
+func GetCurrentBranch() (string, error) {
+	res, err := execute("branch %v", "--show-current")
+	if err != nil {
+		return res, err
+	}
+
+	return strings.TrimSpace(res), nil
 }
