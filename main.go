@@ -18,12 +18,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	inRepo, err := git.IsGitRepository()
-	if err != nil {
-		fmt.Printf("error: %v\n", err)
-		os.Exit(1)
-	}
-
+	inRepo, _ := git.IsGitRepository()
 	if !inRepo {
 		fmt.Printf("error: %v\n", "not a git repository")
 		os.Exit(1)
