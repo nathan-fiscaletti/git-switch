@@ -9,7 +9,9 @@ Switching branches with `git checkout` or `git switch` can be slow, especially i
 - **Fuzzy search**: Instantly filter branches as you type.
 - **Pinned Branches**: A configurable list of branches that will always show at the top of the list.
 - **Keyboard navigation**: Use arrow keys to move, Enter to switch, and Esc/Ctrl+C to quit.
-- **Direct checkout**: Pass a branch name as an argument to switch without the UI.
+- **Git Checkout**: Works as a stand-in replacement for the `git checkout` command.
+- **Custom Impelementation**: Works as a general branch selector that can return to stdout.
+- **Public API**: Can be easily integrated into your own Go projects.
 
 ## Installation
 
@@ -42,17 +44,17 @@ sw
 - Press **Enter** to checkout the selected branch.
 - Press **Esc** or **Ctrl+C** to exit.
 
-### Direct Checkout
+### Git Checkout Override
 
-To checkout a branch directly (no UI):
+Arguments passed to `git-switch` are automatically forwarded to `git checkout`.
 
 ```sh
+# Checkout a branch
 sw <branch-name>
+# Create a new branch
+sw -b <branch-name>
+# etc...
 ```
-
-> Unless prefixed with `-x`, any arguments passed to `sw` will be forwarded to `git checkout`.
-
-If the branch exists, you’ll be switched immediately.
 
 ### Pinned Branches
 
