@@ -86,6 +86,12 @@ echo $branch
 
 ### Using the interactive branch selector in your own project
 
+Install the package in your project using
+
+```
+go get github.com/nathan-fiscaletti/git-switch
+```
+
 The interactive branch selector is exposed in the [`pkg`](./pkg) package.
 
 ```go
