@@ -64,6 +64,39 @@ sw -x pin
 sw -x unpin
 ```
 
+### Using the interactive branch selector in your own project
+
+The interactive branch selector is exposed in the [`pkg`](./pkg) package.
+
+```go
+package main
+
+import (
+    sw "github.com/nathan-fiscaletti/git-switch/pkg"
+)
+
+func main() {
+    branchSelector, err := sw.NewBranchSelector(sw.BranchSelectorArguments{
+        CurrentBranch:      currentBranch,
+        Branches:           branches,
+        PinnedBranches:     pinnedBranches,
+        PinnedBranchPrefix: "★",
+        WindowSize:         10,
+        SearchLabel:        "search branch",
+    })
+    if err != nil {
+        panic(err)
+    }
+
+    b, err := branchSelector.PickBranch()
+    if err != nil {
+        panic(err)
+    }
+
+    // ... use b ...
+}
+```
+
 ## License
 
 MIT (See [LICENSE](./LICENSE))
