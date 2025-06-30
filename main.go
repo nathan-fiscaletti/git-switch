@@ -170,7 +170,7 @@ func main() {
 	branchSelector, err := pkg.NewBranchSelector(pkg.BranchSelectorArguments{
 		CurrentBranch:      currentBranch,
 		Branches:           branches,
-		WindowSize:         10,
+		WindowSize:         cfg.WindowSize,
 		SearchLabel:        "search branch",
 		PinnedBranches:     pinnedBranches,
 		PinnedBranchPrefix: cfg.PinnedBranchPrefix,

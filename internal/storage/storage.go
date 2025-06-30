@@ -23,6 +23,7 @@ type RepositoryConfig struct {
 type Config struct {
 	Repositories       []RepositoryConfig `yaml:"repositories"`
 	PinnedBranchPrefix string             `yaml:"pinned-branch-prefix"`
+	WindowSize         int                `yaml:"window-size"`
 }
 
 func GetConfig() (*Config, error) {
@@ -37,6 +38,7 @@ func GetConfig() (*Config, error) {
 	cfg := Config{
 		PinnedBranchPrefix: "★",
 		Repositories:       []RepositoryConfig{},
+		WindowSize:         10,
 	}
 
 	if _, err := os.Stat(configFile); err != nil {
@@ -69,6 +71,10 @@ func GetConfig() (*Config, error) {
 
 	if cfg.PinnedBranchPrefix == "" {
 		cfg.PinnedBranchPrefix = "★"
+	}
+
+	if cfg.WindowSize == 0 {
+		cfg.WindowSize = 10
 	}
 
 	return &cfg, nil
