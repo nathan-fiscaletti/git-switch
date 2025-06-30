@@ -19,7 +19,7 @@ go install github.com/nathan-fiscaletti/git-switch@latest
 
 > ℹ️ I highly recommend that you alias the `git-switch` command to `sw` in your shell for eas-of-use. The rest of this documentation will make the assumption that you have. If not, use `git-switch` instead of `sw` for each command.
 > 
-> ```sh
+> ```powershell
 > # Windows Powershell
 > "`nset-alias sw git-switch" | out-file -append -encoding utf8 $profile; . > $profile
 > 
