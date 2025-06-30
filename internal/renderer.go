@@ -17,14 +17,15 @@ type state struct {
 }
 
 type Renderer struct {
-	screen        tcell.Screen
-	NormalStyle   tcell.Style
-	BoldStyle     tcell.Style
-	SelectedStyle tcell.Style
-	SelectedBold  tcell.Style
-	InputStyle    tcell.Style
-	WindowSize    int
-	filter        func(input string) []string
+	screen             tcell.Screen
+	NormalStyle        tcell.Style
+	BoldStyle          tcell.Style
+	SelectedStyle      tcell.Style
+	SelectedBold       tcell.Style
+	InputStyle         tcell.Style
+	CurrentBranchStyle tcell.Style
+	WindowSize         int
+	filter             func(input string) []string
 
 	cfg         RendererConfig
 	state       *state
@@ -37,6 +38,7 @@ type RendererConfig struct {
 	WindowSize         int
 	SearchLabel        string
 	PinnedBranchPrefix string
+	CurrentBranch      string
 }
 
 func NewRenderer(cfg RendererConfig) (*Renderer, error) {
@@ -87,12 +89,13 @@ func NewRenderer(cfg RendererConfig) (*Renderer, error) {
 	}
 
 	return &Renderer{
-		NormalStyle:   tcell.StyleDefault,
-		BoldStyle:     tcell.StyleDefault.Bold(true),
-		SelectedStyle: tcell.StyleDefault.Background(tcell.ColorBlue).Foreground(tcell.ColorWhite),
-		SelectedBold:  tcell.StyleDefault.Background(tcell.ColorBlue).Foreground(tcell.ColorWhite).Bold(true),
-		InputStyle:    tcell.StyleDefault.Foreground(tcell.ColorGreen),
-		WindowSize:    cfg.WindowSize,
+		NormalStyle:        tcell.StyleDefault,
+		BoldStyle:          tcell.StyleDefault.Bold(true),
+		SelectedStyle:      tcell.StyleDefault.Background(tcell.ColorBlue).Foreground(tcell.ColorWhite),
+		SelectedBold:       tcell.StyleDefault.Background(tcell.ColorBlue).Foreground(tcell.ColorWhite).Bold(true),
+		InputStyle:         tcell.StyleDefault.Foreground(tcell.ColorGreen),
+		CurrentBranchStyle: tcell.StyleDefault.Foreground(tcell.ColorBlueViolet),
+		WindowSize:         cfg.WindowSize,
 
 		screen:      screen,
 		filter:      filter,
@@ -105,12 +108,31 @@ func NewRenderer(cfg RendererConfig) (*Renderer, error) {
 func (r *Renderer) Draw() {
 	r.screen.Clear()
 
-	// Draw input at the top
+	row := 0
+
+	// 1. Draw current branch at the top
+	if r.cfg.CurrentBranch != "" {
+		currentBranchLabel := fmt.Sprintf("checked out: %v", r.cfg.CurrentBranch)
+		for i, ch := range currentBranchLabel {
+			r.screen.SetContent(i, row, ch, nil, r.CurrentBranchStyle)
+		}
+		row++
+	}
+
+	// 2. Empty line after current branch
+	row++
+
+	// 3. Draw input at the next line
 	inputPrompt := fmt.Sprintf("%v: %v", r.searchLabel, r.state.Input)
 	for i, ch := range inputPrompt {
-		r.screen.SetContent(i, 0, ch, nil, r.InputStyle)
+		r.screen.SetContent(i, row, ch, nil, r.InputStyle)
 	}
-	// Draw list starting at row 1
+	row++
+
+	// 4. Empty line after input
+	row++
+
+	// 5. Draw list starting at the next line
 	end := min(r.state.WindowStart+r.WindowSize, len(r.state.Branches))
 	for i := r.state.WindowStart; i < end; i++ {
 		item := r.state.Branches[i]
@@ -130,7 +152,7 @@ func (r *Renderer) Draw() {
 		if isPinned {
 			pinnedPrefix := fmt.Sprintf("%v ", r.cfg.PinnedBranchPrefix)
 			for _, ch := range pinnedPrefix {
-				r.screen.SetContent(col, i-r.state.WindowStart+1, ch, nil, r.NormalStyle)
+				r.screen.SetContent(col, row+i-r.state.WindowStart, ch, nil, r.NormalStyle)
 				col++
 			}
 		}
@@ -138,22 +160,22 @@ func (r *Renderer) Draw() {
 		if r.state.Input != "" && start != -1 {
 			// Before match
 			for _, ch := range item[:start] {
-				r.screen.SetContent(col, i-r.state.WindowStart+1, ch, nil, style)
+				r.screen.SetContent(col, row+i-r.state.WindowStart, ch, nil, style)
 				col++
 			}
 			// Match in bold
 			for _, ch := range item[start : start+len(r.state.Input)] {
-				r.screen.SetContent(col, i-r.state.WindowStart+1, ch, nil, bold)
+				r.screen.SetContent(col, row+i-r.state.WindowStart, ch, nil, bold)
 				col++
 			}
 			// After match
 			for _, ch := range item[start+len(r.state.Input):] {
-				r.screen.SetContent(col, i-r.state.WindowStart+1, ch, nil, style)
+				r.screen.SetContent(col, row+i-r.state.WindowStart, ch, nil, style)
 				col++
 			}
 		} else {
 			for _, ch := range item {
-				r.screen.SetContent(col, i-r.state.WindowStart+1, ch, nil, style)
+				r.screen.SetContent(col, row+i-r.state.WindowStart, ch, nil, style)
 				col++
 			}
 		}

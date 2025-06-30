@@ -7,6 +7,8 @@ import (
 )
 
 type BranchSelectorArguments struct {
+	// The current branch that is checked out.
+	CurrentBranch string
 	// The list of branches to pick from.
 	Branches []string
 	// The pinned branches to display these will always be displayed at the
@@ -33,6 +35,7 @@ type BranchSelector struct {
 func (b *BranchSelector) PickBranch() (string, error) {
 	renderer, err := internal.NewRenderer(
 		internal.RendererConfig{
+			CurrentBranch:      b.cfg.CurrentBranch,
 			Branches:           b.cfg.Branches,
 			PinnedBranches:     b.cfg.PinnedBranches,
 			WindowSize:         b.cfg.WindowSize,
