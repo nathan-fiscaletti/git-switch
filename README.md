@@ -1,6 +1,3 @@
-https://github.com/user-attachments/assets/f711bcb7-925a-4346-88b6-a567d625c5d6
-
-
 # git-switch
 
 A fast, interactive terminal UI for switching between git branches. Built with [tcell](https://github.com/gdamore/tcell) for a smooth, cross-platform experience.
@@ -10,7 +7,7 @@ Switching branches with `git checkout` or `git switch` can be slow, especially i
 ## Features
 
 - **Fuzzy search**: Instantly filter branches as you type.
-- **Focus Branches**: A configurable list of branches that will always show at the top of the list.
+- **Pinned Branches**: A configurable list of branches that will always show at the top of the list.
 - **Keyboard navigation**: Use arrow keys to move, Enter to switch, and Esc/Ctrl+C to quit.
 - **Direct checkout**: Pass a branch name as an argument to switch without the UI.
 
@@ -20,7 +17,15 @@ Switching branches with `git checkout` or `git switch` can be slow, especially i
 go install github.com/nathan-fiscaletti/git-switch@latest
 ```
 
-> I highly recommend that you alias the `git-switch` command to `sw` in your shell for eas-of-use.
+> ℹ️ I highly recommend that you alias the `git-switch` command to `sw` in your shell for eas-of-use. The rest of this documentation will make the assumption that you have. If not, use `git-switch` instead of `sw` for each command.
+> 
+> ```sh
+> # Windows Powershell
+> "`nset-alias sw git-switch" | out-file -append -encoding utf8 $profile; . > $profile
+> 
+> # Bash (use .zshrc for zsh, etc.)
+> echo "alias sw='git-switch'" >> ~/.bashrc && source ~/.bashrc
+> ```
 
 ## Usage
 
@@ -29,7 +34,7 @@ go install github.com/nathan-fiscaletti/git-switch@latest
 Just run:
 
 ```sh
-git-switch
+sw
 ```
 
 - Start typing to filter branches.
@@ -42,21 +47,21 @@ git-switch
 To checkout a branch directly (no UI):
 
 ```sh
-git-switch <branch-name>
+sw <branch-name>
 ```
 
-> Unless prefixed with `-x`, any arguments passed to `git-switch` will be forwarded to `git checkout`.
+> Unless prefixed with `-x`, any arguments passed to `sw` will be forwarded to `git checkout`.
 
 If the branch exists, you’ll be switched immediately.
 
-### Focus Branches
+### Pinned Branches
 
-A focused branch always shows at the top of the list of branches in the switcher.
+A pinned branch always shows at the top of the list of branches in the switcher.
 
 ```sh
 # While a branch is checked out
-git-switch -x focus
-git-switch -x unfocus
+sw -x pin
+sw -x unpin
 ```
 
 ## License

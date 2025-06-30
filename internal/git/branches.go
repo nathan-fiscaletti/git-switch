@@ -8,8 +8,9 @@ import (
 )
 
 func ListRemotes() ([]string, error) {
-	out, err := execute("remote")
+	out, err := executeHide("remote")
 	if err != nil {
+		print(out)
 		return nil, err
 	}
 
@@ -22,8 +23,9 @@ func AllBranches() ([]string, error) {
 		return nil, err
 	}
 
-	out, err := execute("branch -a --format=%%(refname:short)")
+	out, err := executeHide("branch -a --format=%%(refname:short)")
 	if err != nil {
+		print(out)
 		return nil, err
 	}
 
@@ -55,8 +57,9 @@ func ExecuteCheckout(cmd string, args ...any) error {
 }
 
 func GetCurrentBranch() (string, error) {
-	res, err := execute("branch %v", "--show-current")
+	res, err := executeHide("branch %v", "--show-current")
 	if err != nil {
+		print(res)
 		return res, err
 	}
 

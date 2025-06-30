@@ -32,24 +32,25 @@ type Renderer struct {
 }
 
 type RendererConfig struct {
-	Branches      []string
-	FocusBranches []string
-	WindowSize    int
-	SearchLabel   string
+	Branches           []string
+	PinnedBranches     []string
+	WindowSize         int
+	SearchLabel        string
+	PinnedBranchPrefix string
 }
 
 func NewRenderer(cfg RendererConfig) (*Renderer, error) {
-	// Only include focus branches if they are real branches.
-	focusBranches := lo.Filter(cfg.FocusBranches, func(s string, _ int) bool {
+	// Only include pinned branches if they are real branches.
+	pinnedBranches := lo.Filter(cfg.PinnedBranches, func(s string, _ int) bool {
 		return lo.Contains(cfg.Branches, s)
 	})
 
-	// Remove focus branches from normal branches
+	// Remove pinned branches from normal branches
 	normalBranches := lo.Filter(cfg.Branches, func(s string, _ int) bool {
-		return !lo.Contains(focusBranches, s)
+		return !lo.Contains(pinnedBranches, s)
 	})
 
-	allBranches := append(focusBranches, normalBranches...)
+	allBranches := append(pinnedBranches, normalBranches...)
 
 	state := &state{
 		Input:       "",
@@ -68,15 +69,15 @@ func NewRenderer(cfg RendererConfig) (*Renderer, error) {
 	}
 
 	filter := func(input string) []string {
-		if input == "" && len(focusBranches) > 0 {
-			// Show focus branches at top, then the rest (deduped)
+		if input == "" && len(pinnedBranches) > 0 {
+			// Show pinned branches at top, then the rest (deduped)
 			return allBranches
 		}
 		// Filter all branches (deduped)
 		filtered := lo.Filter(allBranches, func(s string, _ int) bool {
 			return strings.Contains(strings.ToLower(s), strings.ToLower(input))
 		})
-		// Remove duplicates in case focus and normal overlap in search
+		// Remove duplicates in case pinned and normal overlap in search
 		return lo.Uniq(filtered)
 	}
 
@@ -103,6 +104,7 @@ func NewRenderer(cfg RendererConfig) (*Renderer, error) {
 
 func (r *Renderer) Draw() {
 	r.screen.Clear()
+
 	// Draw input at the top
 	inputPrompt := fmt.Sprintf("%v: %v", r.searchLabel, r.state.Input)
 	for i, ch := range inputPrompt {
@@ -112,7 +114,7 @@ func (r *Renderer) Draw() {
 	end := min(r.state.WindowStart+r.WindowSize, len(r.state.Branches))
 	for i := r.state.WindowStart; i < end; i++ {
 		item := r.state.Branches[i]
-		isFocused := lo.Contains(r.cfg.FocusBranches, item)
+		isPinned := lo.Contains(r.cfg.PinnedBranches, item)
 		lowerItem := strings.ToLower(item)
 		lowerInput := strings.ToLower(r.state.Input)
 		start := strings.Index(lowerItem, lowerInput)
@@ -124,10 +126,10 @@ func (r *Renderer) Draw() {
 			style = r.SelectedStyle
 			bold = r.SelectedBold
 		}
-		// Render the " (focused)" suffix in normal style, never selected/bold
-		if isFocused {
-			focusPrefix := "★ "
-			for _, ch := range focusPrefix {
+		// Render the pinned prefix in normal style, never selected/bold
+		if isPinned {
+			pinnedPrefix := fmt.Sprintf("%v ", r.cfg.PinnedBranchPrefix)
+			for _, ch := range pinnedPrefix {
 				r.screen.SetContent(col, i-r.state.WindowStart+1, ch, nil, r.NormalStyle)
 				col++
 			}

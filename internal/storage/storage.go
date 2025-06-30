@@ -16,12 +16,13 @@ const (
 )
 
 type RepositoryConfig struct {
-	Path          string   `yaml:"path"`
-	FocusBranches []string `yaml:"focus-branches"`
+	Path           string   `yaml:"path"`
+	PinnedBranches []string `yaml:"pinned-branches"`
 }
 
 type Config struct {
-	Repositories []RepositoryConfig `yaml:"repositories"`
+	Repositories       []RepositoryConfig `yaml:"repositories"`
+	PinnedBranchPrefix string             `yaml:"pinned-branch-prefix"`
 }
 
 func GetConfig() (*Config, error) {
@@ -34,7 +35,8 @@ func GetConfig() (*Config, error) {
 	configFile := filepath.Join(storagePath, "config")
 
 	cfg := Config{
-		Repositories: []RepositoryConfig{},
+		PinnedBranchPrefix: "★",
+		Repositories:       []RepositoryConfig{},
 	}
 
 	if _, err := os.Stat(configFile); err != nil {
@@ -65,6 +67,10 @@ func GetConfig() (*Config, error) {
 		return nil, err
 	}
 
+	if cfg.PinnedBranchPrefix == "" {
+		cfg.PinnedBranchPrefix = "★"
+	}
+
 	return &cfg, nil
 }
 
@@ -85,7 +91,7 @@ func write(cfg *Config) error {
 	return os.WriteFile(configFile, cfgBytes, 0660)
 }
 
-func Focus(branch string) (*Config, error) {
+func Pin(branch string) (*Config, error) {
 	branch = strings.TrimSpace(branch)
 
 	cfg, err := GetConfig()
@@ -101,13 +107,13 @@ func Focus(branch string) (*Config, error) {
 	if _, idx, found := lo.FindIndexOf(cfg.Repositories, func(r RepositoryConfig) bool {
 		return r.Path == repositoryPath
 	}); found {
-		if !lo.Contains(cfg.Repositories[idx].FocusBranches, branch) {
-			cfg.Repositories[idx].FocusBranches = append(cfg.Repositories[idx].FocusBranches, branch)
+		if !lo.Contains(cfg.Repositories[idx].PinnedBranches, branch) {
+			cfg.Repositories[idx].PinnedBranches = append(cfg.Repositories[idx].PinnedBranches, branch)
 		}
 	} else {
 		cfg.Repositories = append(cfg.Repositories, RepositoryConfig{
-			Path:          repositoryPath,
-			FocusBranches: []string{branch},
+			Path:           repositoryPath,
+			PinnedBranches: []string{branch},
 		})
 	}
 
@@ -115,10 +121,10 @@ func Focus(branch string) (*Config, error) {
 }
 
 var (
-	ErrFocusBranchNotFound = errors.New("focus branch not found")
+	ErrBranchNotPinned = errors.New("branch not pinned")
 )
 
-func Unfocus(branch string) (*Config, error) {
+func Unpin(branch string) (*Config, error) {
 	cfg, err := GetConfig()
 	if err != nil {
 		return nil, err
@@ -134,22 +140,22 @@ func Unfocus(branch string) (*Config, error) {
 		return r.Path == repositoryPath
 	})
 	if !found {
-		return nil, ErrFocusBranchNotFound
+		return nil, ErrBranchNotPinned
 	}
 
-	// Find the focus branch
-	_, j, found := lo.FindIndexOf(cfg.Repositories[i].FocusBranches, func(f string) bool {
+	// Find the pinned branch
+	_, j, found := lo.FindIndexOf(cfg.Repositories[i].PinnedBranches, func(f string) bool {
 		return f == branch
 	})
 
 	if !found {
-		return nil, ErrFocusBranchNotFound
+		return nil, ErrBranchNotPinned
 	}
 
-	// Remove the focus branch
-	cfg.Repositories[i].FocusBranches = append(
-		cfg.Repositories[i].FocusBranches[:j],
-		cfg.Repositories[i].FocusBranches[j+1:]...,
+	// Remove the pinned branch
+	cfg.Repositories[i].PinnedBranches = append(
+		cfg.Repositories[i].PinnedBranches[:j],
+		cfg.Repositories[i].PinnedBranches[j+1:]...,
 	)
 
 	return cfg, write(cfg)

@@ -31,27 +31,31 @@ func main() {
 		switch cmd {
 		case "-x":
 			switch args[0] {
-			case "focus":
+			case "focus": // Maintain 'focus' for backwards compatibility.
+				fallthrough
+			case "pin":
 				currentBranch, err := git.GetCurrentBranch()
 				if err != nil {
 					fmt.Printf("error: %v\n", err)
 					os.Exit(1)
 				}
 
-				_, err = storage.Focus(currentBranch)
+				_, err = storage.Pin(currentBranch)
 				if err != nil {
 					fmt.Printf("error: %v\n", err)
 					os.Exit(1)
 				}
 				os.Exit(0)
-			case "unfocus":
+			case "unfocus": // Maintain 'unfocus' for backwards compatibility
+				fallthrough
+			case "unpin":
 				currentBranch, err := git.GetCurrentBranch()
 				if err != nil {
 					fmt.Printf("error: %v\n", err)
 					os.Exit(1)
 				}
 
-				_, err = storage.Unfocus(currentBranch)
+				_, err = storage.Unpin(currentBranch)
 				if err != nil {
 					fmt.Printf("error: %v\n", err)
 					os.Exit(1)
@@ -89,19 +93,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	focusBranches := []string{}
+	pinnedBranches := []string{}
 
 	if repo, repoFound := lo.Find(cfg.Repositories, func(r storage.RepositoryConfig) bool {
 		return r.Path == repositoryPath
 	}); repoFound {
-		focusBranches = repo.FocusBranches
+		pinnedBranches = repo.PinnedBranches
 	}
 
 	branchSelector, err := pkg.NewBranchSelector(pkg.BranchSelectorArguments{
-		Branches:      branches,
-		WindowSize:    10,
-		SearchLabel:   "search branch",
-		FocusBranches: focusBranches,
+		Branches:           branches,
+		WindowSize:         10,
+		SearchLabel:        "search branch",
+		PinnedBranches:     pinnedBranches,
+		PinnedBranchPrefix: cfg.PinnedBranchPrefix,
 	})
 	if err != nil {
 		panic(err)

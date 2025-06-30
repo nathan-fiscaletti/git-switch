@@ -19,15 +19,16 @@ func ValidateGitInstallation() error {
 }
 
 func IsGitRepository() (bool, error) {
-	res, err := execute("rev-parse --is-inside-work-tree")
+	res, err := executeHide("rev-parse --is-inside-work-tree")
 	if err != nil {
+		print(res)
 		return false, err
 	}
 
 	return strings.TrimSpace(res) == "true", nil
 }
 
-func execute(format string, args ...any) (string, error) {
+func executeHide(format string, args ...any) (string, error) {
 	slog.Debug("executing git command", slog.String("command", fmt.Sprintf(format, args...)))
 
 	cmdFormatted := fmt.Sprintf(format, args...)
