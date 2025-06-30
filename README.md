@@ -123,6 +123,19 @@ func main() {
 }
 ```
 
+## Configuration
+
+Config File Location:
+```
+Windows:  %APPDATA%\.gitswitch\config
+Linux:    $HOME/.config/.gitswitch/config
+macOS:    $HOME/Library/Application Support/.gitswitch/config
+```
+
+Configuration Values:
+- `window-size`: The maximum number of branches to display at one time. (Default: 10)
+- `pinned-branch-prefix`: The prefix to display before pinned branches. (Default: ★)
+
 ## License
 
 MIT (See [LICENSE](./LICENSE))
