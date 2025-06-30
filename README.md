@@ -64,6 +64,22 @@ sw -x pin
 sw -x unpin
 ```
 
+### Using git-switch as a general branch selector
+
+You can use git-switch to select a branch and have the selected branch returned to the caller. 
+
+When using this mode the branch will not be automatically checked out, but instead printed to stdout.
+
+```powershell
+# Windows Powershell
+$branch = sw -x pipe
+echo $branch
+
+# Bash
+branch=$(sw -x pipe)
+echo $branch
+```
+
 ### Using the interactive branch selector in your own project
 
 The interactive branch selector is exposed in the [`pkg`](./pkg) package.
