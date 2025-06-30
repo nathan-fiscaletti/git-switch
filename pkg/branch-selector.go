@@ -9,9 +9,11 @@ import (
 type BranchSelectorArguments struct {
 	// The list of branches to pick from.
 	Branches []string
-	// The focus branches to display these will always be displayed at the
+	// The pinned branches to display these will always be displayed at the
 	// top of the list when able.
-	FocusBranches []string
+	PinnedBranches []string
+	// PinnedBranchPrefix is the prefix to use before pinned branches.
+	PinnedBranchPrefix string
 	// The maximum number of branches to show at any given time.
 	WindowSize int
 	// The label to show in front of the search input.
@@ -31,10 +33,11 @@ type BranchSelector struct {
 func (b *BranchSelector) PickBranch() (string, error) {
 	renderer, err := internal.NewRenderer(
 		internal.RendererConfig{
-			Branches:      b.cfg.Branches,
-			FocusBranches: b.cfg.FocusBranches,
-			WindowSize:    b.cfg.WindowSize,
-			SearchLabel:   b.cfg.SearchLabel,
+			Branches:           b.cfg.Branches,
+			PinnedBranches:     b.cfg.PinnedBranches,
+			WindowSize:         b.cfg.WindowSize,
+			SearchLabel:        b.cfg.SearchLabel,
+			PinnedBranchPrefix: b.cfg.PinnedBranchPrefix,
 		},
 	)
 	if err != nil {
