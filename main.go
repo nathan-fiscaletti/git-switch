@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/nathan-fiscaletti/git-switch/internal/app"
 	"github.com/nathan-fiscaletti/git-switch/internal/git"
 	"github.com/nathan-fiscaletti/git-switch/internal/storage"
 	"github.com/nathan-fiscaletti/git-switch/pkg"
@@ -12,24 +14,24 @@ import (
 )
 
 func main() {
-	err := git.ValidateGitInstallation()
-	if err != nil {
-		fmt.Printf("error: %v\n", err)
-		os.Exit(1)
-	}
-
-	inRepo, _ := git.IsGitRepository()
-	if !inRepo {
-		fmt.Printf("error: %v\n", "not a git repository")
-		os.Exit(1)
-	}
-
 	if len(os.Args) > 1 {
 		cmd := os.Args[1]
 		args := os.Args[2:]
 
 		switch cmd {
 		case "-x":
+			err := git.ValidateGitInstallation()
+			if err != nil {
+				fmt.Printf("error: %v\n", err)
+				os.Exit(1)
+			}
+
+			inRepo, _ := git.IsGitRepository()
+			if !inRepo {
+				fmt.Printf("error: %v\n", "not a git repository")
+				os.Exit(1)
+			}
+
 			switch args[0] {
 			case "focus": // Maintain 'focus' for backwards compatibility.
 				fallthrough
@@ -62,17 +64,76 @@ func main() {
 				}
 				os.Exit(0)
 			default:
-				println("unknown command: %v", args[0])
+				fmt.Printf("unknown internal command: %v\n", args[0])
 				os.Exit(1)
 			}
+		case "--help":
+			fallthrough
+		case "-h":
+			cmd := strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
+			fmt.Printf("%v: A fast, interactive terminal UI for switching between git branches.\n", cmd)
+			println()
+			println("Usage:")
+			println()
+			fmt.Printf("  %v [-h|-x <cmd>] ...\n", cmd)
+			println()
+			println("  - Run with no arguments for interactive `git checkout`")
+			println("  - Run with arguments for regular `git checkout`")
+			println("  - Run with `-x` for internal commands")
+			println()
+			println("Internal Commands:")
+			println()
+			println("  pin:   Pins the current branch")
+			println("  unpin: Unpins the current branch")
+			os.Exit(0)
+		case "--version":
+			fallthrough
+		case "-v":
+			v, err := app.GetVersionString()
+			if err != nil {
+				fmt.Printf("error: %v\n", err)
+				os.Exit(1)
+			}
+			println(v)
+			os.Exit(0)
 		default:
-			err := git.ExecuteCheckout(strings.Join(os.Args[1:], " "))
+			err := git.ValidateGitInstallation()
+			if err != nil {
+				fmt.Printf("error: %v\n", err)
+				os.Exit(1)
+			}
+
+			inRepo, _ := git.IsGitRepository()
+			if !inRepo {
+				fmt.Printf("error: %v\n", "not a git repository")
+				os.Exit(1)
+			}
+
+			err = git.ExecuteCheckout(strings.Join(os.Args[1:], " "))
 			if err != nil {
 				fmt.Printf("error: %v\n", err)
 				os.Exit(1)
 			}
 			os.Exit(0)
 		}
+	}
+
+	err := git.ValidateGitInstallation()
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+		os.Exit(1)
+	}
+
+	inRepo, _ := git.IsGitRepository()
+	if !inRepo {
+		fmt.Printf("error: %v\n", "not a git repository")
+		os.Exit(1)
+	}
+
+	currentBranch, err := git.GetCurrentBranch()
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+		os.Exit(1)
 	}
 
 	branches, err := git.AllBranches()
@@ -102,6 +163,7 @@ func main() {
 	}
 
 	branchSelector, err := pkg.NewBranchSelector(pkg.BranchSelectorArguments{
+		CurrentBranch:      currentBranch,
 		Branches:           branches,
 		WindowSize:         10,
 		SearchLabel:        "search branch",
