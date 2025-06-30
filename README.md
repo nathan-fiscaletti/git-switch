@@ -1,3 +1,5 @@
+https://github.com/user-attachments/assets/d9e75405-bf04-4bf9-9237-5523489f6e2e
+
 # git-switch
 
 A fast, interactive terminal UI for switching between git branches. Built with [tcell](https://github.com/gdamore/tcell) for a smooth, cross-platform experience.
