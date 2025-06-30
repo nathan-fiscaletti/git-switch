@@ -14,6 +14,8 @@ import (
 )
 
 func main() {
+	pipeOutput := false
+
 	if len(os.Args) > 1 {
 		cmd := os.Args[1]
 		args := os.Args[2:]
@@ -63,6 +65,8 @@ func main() {
 					os.Exit(1)
 				}
 				os.Exit(0)
+			case "pipe":
+				pipeOutput = true
 			default:
 				fmt.Printf("unknown internal command: %v\n", args[0])
 				os.Exit(1)
@@ -85,6 +89,7 @@ func main() {
 			println()
 			println("  pin:   Pins the current branch")
 			println("  unpin: Unpins the current branch")
+			println("  pipe:  Pipes the selected branch name to stdout instead of checking it out")
 			os.Exit(0)
 		case "--version":
 			fallthrough
@@ -177,6 +182,11 @@ func main() {
 	b, err := branchSelector.PickBranch()
 	if err != nil {
 		panic(err)
+	}
+
+	if pipeOutput {
+		fmt.Println(b)
+		os.Exit(0)
 	}
 
 	if len(b) > 0 {
