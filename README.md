@@ -21,7 +21,7 @@ Switching branches with `git checkout` or `git switch` can be slow, especially i
 go install github.com/nathan-fiscaletti/git-switch@latest
 ```
 
-> ℹ️ I highly recommend that you alias the `git-switch` command to `sw` in your shell for eas-of-use. The rest of this documentation will make the assumption that you have. If not, use `git-switch` instead of `sw` for each command.
+> ℹ️ I highly recommend that you alias the `git-switch` command to `sw` in your shell for ease-of-use. The rest of this documentation will make the assumption that you have. If not, use `git-switch` instead of `sw` for each command.
 > 
 > ```powershell
 > # Windows Powershell
@@ -67,6 +67,8 @@ A pinned branch always shows at the top of the list of branches in the switcher.
 sw -x pin
 sw -x unpin
 ```
+
+> Passing `-x` to `git-switch` will tell it you are executing an internal command.
 
 ### Using git-switch as a general branch selector
 
