@@ -10,11 +10,13 @@ import (
 	"github.com/nathan-fiscaletti/git-switch/internal/git"
 	"github.com/nathan-fiscaletti/git-switch/internal/storage"
 	"github.com/nathan-fiscaletti/git-switch/pkg"
-	"github.com/samber/lo"
 )
 
 func main() {
-	pipeOutput := false
+	var (
+		pipeOutput = false
+		pop        = false
+	)
 
 	if len(os.Args) > 1 {
 		cmd := os.Args[1]
@@ -67,6 +69,8 @@ func main() {
 				os.Exit(0)
 			case "pipe":
 				pipeOutput = true
+			case "pop":
+				pop = true
 			default:
 				fmt.Printf("unknown internal command: %v\n", args[0])
 				os.Exit(1)
@@ -114,6 +118,18 @@ func main() {
 				os.Exit(1)
 			}
 
+			currentBranch, err := git.GetCurrentBranch()
+			if err != nil {
+				fmt.Printf("error: %v\n", err)
+				os.Exit(1)
+			}
+
+			_, err = storage.SetLastBranch(currentBranch)
+			if err != nil {
+				fmt.Printf("error: %v\n", err)
+				os.Exit(1)
+			}
+
 			err = git.ExecuteCheckout(strings.Join(os.Args[1:], " "))
 			if err != nil {
 				fmt.Printf("error: %v\n", err)
@@ -135,18 +151,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	currentBranch, err := git.GetCurrentBranch()
-	if err != nil {
-		fmt.Printf("error: %v\n", err)
-		os.Exit(1)
-	}
-
-	branches, err := git.AllBranches()
-	if err != nil {
-		fmt.Printf("error: %v\n", err)
-		os.Exit(1)
-	}
-
 	cfg, err := storage.GetConfig()
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
@@ -159,13 +163,54 @@ func main() {
 		os.Exit(1)
 	}
 
-	pinnedBranches := []string{}
-
-	if repo, repoFound := lo.Find(cfg.Repositories, func(r storage.RepositoryConfig) bool {
-		return r.Path == repositoryPath
-	}); repoFound {
-		pinnedBranches = repo.PinnedBranches
+	repository, err := cfg.GetRepositoryConfig(repositoryPath)
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+		os.Exit(1)
 	}
+
+	currentBranch, err := git.GetCurrentBranch()
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if pop {
+		if repository.LastBranch == "" {
+			fmt.Println("error: no branch to pop to")
+			os.Exit(1)
+		}
+
+		_, err = storage.SetLastBranch(currentBranch)
+		if err != nil {
+			fmt.Printf("error: %v\n", err)
+			os.Exit(1)
+		}
+
+		err = git.Checkout(repository.LastBranch)
+		if err != nil {
+			fmt.Printf("error: %v\n", err)
+			os.Exit(1)
+		}
+
+		os.Exit(0)
+	}
+
+	if cfg.PruneRemoteBranches {
+		err := git.PruneRemoteBranches()
+		if err != nil {
+			fmt.Printf("error: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
+	branches, err := git.ListBranches()
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+		os.Exit(1)
+	}
+
+	pinnedBranches := repository.PinnedBranches
 
 	branchSelector, err := pkg.NewBranchSelector(pkg.BranchSelectorArguments{
 		CurrentBranch:      currentBranch,
@@ -190,6 +235,12 @@ func main() {
 	}
 
 	if len(b) > 0 {
+		_, err = storage.SetLastBranch(currentBranch)
+		if err != nil {
+			fmt.Printf("error: %v\n", err)
+			os.Exit(1)
+		}
+
 		err = git.Checkout(b)
 		if err != nil {
 			fmt.Printf("error: %v\n", err)

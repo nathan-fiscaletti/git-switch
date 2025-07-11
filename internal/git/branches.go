@@ -1,23 +1,29 @@
 package git
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/samber/lo"
 )
 
-func ListRemotes() ([]string, error) {
-	out, err := executeHide("remote")
+func PruneRemoteBranches() error {
+	remotes, err := ListRemotes()
 	if err != nil {
-		print(out)
-		return nil, err
+		return err
 	}
 
-	return strings.Split(out, "\n"), nil
+	for _, remote := range remotes {
+		out, err := executeHide("remote prune %v", remote)
+		if err != nil {
+			print(out)
+			return err
+		}
+	}
+
+	return nil
 }
 
-func AllBranches() ([]string, error) {
+func ListBranches() ([]string, error) {
 	remotes, err := ListRemotes()
 	if err != nil {
 		return nil, err
@@ -46,14 +52,6 @@ func AllBranches() ([]string, error) {
 
 		return b, true
 	})), nil
-}
-
-func Checkout(branch string) error {
-	return executeWithStdout("checkout %v", branch)
-}
-
-func ExecuteCheckout(cmd string, args ...any) error {
-	return executeWithStdout(fmt.Sprintf("checkout %v", cmd), args...)
 }
 
 func GetCurrentBranch() (string, error) {
