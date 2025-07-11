@@ -70,6 +70,14 @@ sw -x unpin
 
 > Passing `-x` to `git-switch` will tell it you are executing an internal command.
 
+### Popping branches
+
+Any time you change branches using `git-switch`, your previous branch is stored. You can get back to it easily by using the `pop` command.
+
+```sh
+sw -x pop
+```
+
 ### Using git-switch as a general branch selector
 
 You can use git-switch to select a branch and have the selected branch returned to the caller. 
@@ -137,6 +145,7 @@ macOS:    $HOME/Library/Application Support/.gitswitch/config
 Configuration Values:
 - `window-size`: The maximum number of branches to display at one time. (Default: 10)
 - `pinned-branch-prefix`: The prefix to display before pinned branches. (Default: ★)
+- `prune-remote-branches`: Will automatically run `git remote prune` for each remote before listing branches. (Default: false)
 
 ## License
 
