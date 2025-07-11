@@ -78,6 +78,9 @@ Any time you change branches using `git-switch`, your previous branch is stored.
 sw -x pop
 ```
 
+> [!WARNING]\
+> If you check out a branch using `git` directly, `git-switch` will not be aware of the change. If you intend to use `sw -x pop`, you should always switch branches using `git-switch`.
+
 ### Using git-switch as a general branch selector
 
 You can use git-switch to select a branch and have the selected branch returned to the caller. 
