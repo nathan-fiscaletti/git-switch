@@ -94,6 +94,7 @@ func main() {
 			println("  pin:   Pins the current branch")
 			println("  unpin: Unpins the current branch")
 			println("  pipe:  Pipes the selected branch name to stdout instead of checking it out")
+			println("  pop:   Checks out the last branch you were in.")
 			os.Exit(0)
 		case "--version":
 			fallthrough
