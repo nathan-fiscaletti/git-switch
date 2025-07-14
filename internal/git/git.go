@@ -2,6 +2,7 @@ package git
 
 import (
 	"errors"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -23,4 +24,14 @@ func IsGitRepository() (bool, error) {
 	}
 
 	return strings.TrimSpace(res) == "true", nil
+}
+
+func GetRepositoryPath() (string, error) {
+	res, err := executeHide("rev-parse --show-toplevel")
+	if err != nil {
+		print(res)
+		return "", err
+	}
+
+	return strings.ReplaceAll(strings.TrimSpace(res), "/", string(os.PathSeparator)), nil
 }

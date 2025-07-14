@@ -158,7 +158,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	repositoryPath, err := os.Getwd()
+	repositoryPath, err := git.GetRepositoryPath()
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 		os.Exit(1)
