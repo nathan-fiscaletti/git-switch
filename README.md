@@ -58,6 +58,11 @@ sw -b <branch-name>
 # etc...
 ```
 
+## Internal Commands
+
+> [!TIP]\
+> Passing `-x` to `git-switch` will tell it you are executing an internal command.
+
 ### Pinned Branches
 
 A pinned branch always shows at the top of the list of branches in the switcher.
@@ -68,7 +73,18 @@ sw -x pin
 sw -x unpin
 ```
 
-> Passing `-x` to `git-switch` will tell it you are executing an internal command.
+By default, the currently checked out branch will be pinned/un-pinned. If you wish to pin/un-pin another branch, you can pass it in as an optional parameter.
+
+```sh
+sw -x pin <branch>
+sw -x unpin <branch>
+```
+
+You can clear all pinned branches by running
+
+```sh
+sw -x unpin all
+```
 
 ### Popping branches
 
