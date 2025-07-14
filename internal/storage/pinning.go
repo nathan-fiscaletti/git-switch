@@ -2,9 +2,9 @@ package storage
 
 import (
 	"errors"
-	"os"
 	"strings"
 
+	"github.com/nathan-fiscaletti/git-switch/internal/git"
 	"github.com/samber/lo"
 )
 
@@ -20,7 +20,7 @@ func Pin(branch string) (*Config, error) {
 		return nil, err
 	}
 
-	repositoryPath, err := os.Getwd()
+	repositoryPath, err := git.GetRepositoryPath()
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func Unpin(branch string) (*Config, error) {
 		return nil, err
 	}
 
-	repositoryPath, err := os.Getwd()
+	repositoryPath, err := git.GetRepositoryPath()
 	if err != nil {
 		return nil, err
 	}
