@@ -37,35 +37,58 @@ func main() {
 			}
 
 			switch args[0] {
-			case "focus": // Maintain 'focus' for backwards compatibility.
-				fallthrough
 			case "pin":
-				currentBranch, err := git.GetCurrentBranch()
-				if err != nil {
-					fmt.Printf("error: %v\n", err)
-					os.Exit(1)
+				args = args[1:]
+
+				var branch string
+				if len(args) > 0 {
+					branch = args[0]
+				} else {
+					branch, err = git.GetCurrentBranch()
+					if err != nil {
+						fmt.Printf("error: %v\n", err)
+						os.Exit(1)
+					}
 				}
 
-				_, err = storage.Pin(currentBranch)
+				_, err = storage.Pin(branch)
 				if err != nil {
 					fmt.Printf("error: %v\n", err)
 					os.Exit(1)
 				}
 				os.Exit(0)
-			case "unfocus": // Maintain 'unfocus' for backwards compatibility
-				fallthrough
 			case "unpin":
-				currentBranch, err := git.GetCurrentBranch()
+				args = args[1:]
+
+				var branch string
+				if len(args) > 0 {
+					branch = args[0]
+				} else {
+					branch, err = git.GetCurrentBranch()
+					if err != nil {
+						fmt.Printf("error: %v\n", err)
+						os.Exit(1)
+					}
+				}
+
+				if branch == "all" || branch == "*" {
+					err = storage.ClearPins()
+					if err != nil {
+						fmt.Printf("error: %v\n", err)
+						os.Exit(1)
+					}
+
+					println("Unpinned all pinned branches")
+					os.Exit(0)
+				}
+
+				_, err = storage.Unpin(branch)
 				if err != nil {
 					fmt.Printf("error: %v\n", err)
 					os.Exit(1)
 				}
 
-				_, err = storage.Unpin(currentBranch)
-				if err != nil {
-					fmt.Printf("error: %v\n", err)
-					os.Exit(1)
-				}
+				fmt.Printf("Unpinned %v\n", branch)
 				os.Exit(0)
 			case "pipe":
 				pipeOutput = true

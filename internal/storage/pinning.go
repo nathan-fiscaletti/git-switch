@@ -77,3 +77,23 @@ func Unpin(branch string) (*Config, error) {
 
 	return cfg, write(cfg)
 }
+
+func ClearPins() error {
+	cfg, err := GetConfig()
+	if err != nil {
+		return err
+	}
+
+	repositoryPath, err := git.GetRepositoryPath()
+	if err != nil {
+		return err
+	}
+
+	if _, idx, found := lo.FindIndexOf(cfg.Repositories, func(r RepositoryConfig) bool {
+		return r.Path == repositoryPath
+	}); found {
+		cfg.Repositories[idx].PinnedBranches = []string{}
+	}
+
+	return write(cfg)
+}
