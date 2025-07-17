@@ -21,7 +21,8 @@ Switching branches with `git checkout` or `git switch` can be slow, especially i
 go install github.com/nathan-fiscaletti/git-switch@latest
 ```
 
-> ℹ️ I highly recommend that you alias the `git-switch` command to `sw` in your shell for ease-of-use. The rest of this documentation will make the assumption that you have. If not, use `git-switch` instead of `sw` for each command.
+> [!NOTE]\
+> git-switch by default installs as the command `git-switch`. I highly recommend that you alias the `git-switch` command to `sw` in your shell for ease-of-use. The rest of this documentation will make the assumption that you have. If not, use `git-switch` instead of `sw` for each command.
 > 
 > ```powershell
 > # Windows Powershell
