@@ -38,7 +38,13 @@ func (c *Config) GetRepositoryConfig(path string) (*RepositoryConfig, error) {
 		}
 	}
 
-	return nil, ErrRepositoryNotFound
+	rc := RepositoryConfig{
+		Path: path,
+	}
+
+	c.Repositories = append(c.Repositories, rc)
+
+	return &rc, write(c)
 }
 
 func GetConfig() (*Config, error) {
