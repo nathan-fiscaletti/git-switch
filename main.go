@@ -118,6 +118,11 @@ func main() {
 			println("  unpin: Unpins the current branch")
 			println("  pipe:  Pipes the selected branch name to stdout instead of checking it out")
 			println("  pop:   Checks out the last branch you were in.")
+			println()
+			println("Interactive Mode Hotkeys:")
+			println()
+			println("  CTRL+D: Pin the selected branch")
+			println("  CTRL+U: Unpin the selected branch")
 			os.Exit(0)
 		case "--version":
 			fallthrough
@@ -241,8 +246,16 @@ func main() {
 		Branches:           branches,
 		WindowSize:         cfg.WindowSize,
 		SearchLabel:        "search branch",
-		PinnedBranches:     pinnedBranches,
+		PinnedBranches:     &pinnedBranches,
 		PinnedBranchPrefix: cfg.PinnedBranchPrefix,
+		OnPinBranch: func(branch string) error {
+			_, err := storage.Pin(branch)
+			return err
+		},
+		OnUnpinBranch: func(branch string) error {
+			_, err := storage.Unpin(branch)
+			return err
+		},
 	})
 	if err != nil {
 		panic(err)

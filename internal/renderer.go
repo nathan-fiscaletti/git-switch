@@ -34,7 +34,7 @@ type Renderer struct {
 
 type RendererConfig struct {
 	Branches           []string
-	PinnedBranches     []string
+	PinnedBranches     *[]string
 	WindowSize         int
 	SearchLabel        string
 	PinnedBranchPrefix string
@@ -43,7 +43,7 @@ type RendererConfig struct {
 
 func NewRenderer(cfg RendererConfig) (*Renderer, error) {
 	// Only include pinned branches if they are real branches.
-	pinnedBranches := lo.Filter(cfg.PinnedBranches, func(s string, _ int) bool {
+	pinnedBranches := lo.Filter(*cfg.PinnedBranches, func(s string, _ int) bool {
 		return lo.Contains(cfg.Branches, s)
 	})
 
@@ -70,25 +70,12 @@ func NewRenderer(cfg RendererConfig) (*Renderer, error) {
 		return nil, err
 	}
 
-	filter := func(input string) []string {
-		if input == "" && len(pinnedBranches) > 0 {
-			// Show pinned branches at top, then the rest (deduped)
-			return allBranches
-		}
-		// Filter all branches (deduped)
-		filtered := lo.Filter(allBranches, func(s string, _ int) bool {
-			return strings.Contains(strings.ToLower(s), strings.ToLower(input))
-		})
-		// Remove duplicates in case pinned and normal overlap in search
-		return lo.Uniq(filtered)
-	}
-
 	searchLabel := "search"
 	if len(cfg.SearchLabel) > 0 {
 		searchLabel = cfg.SearchLabel
 	}
 
-	return &Renderer{
+	renderer := &Renderer{
 		NormalStyle:        tcell.StyleDefault,
 		BoldStyle:          tcell.StyleDefault.Bold(true),
 		SelectedStyle:      tcell.StyleDefault.Background(tcell.ColorBlue).Foreground(tcell.ColorWhite),
@@ -98,11 +85,46 @@ func NewRenderer(cfg RendererConfig) (*Renderer, error) {
 		WindowSize:         cfg.WindowSize,
 
 		screen:      screen,
-		filter:      filter,
 		state:       state,
 		searchLabel: searchLabel,
 		cfg:         cfg,
-	}, nil
+	}
+
+	// Create the filter function that references the renderer's config
+	filter := func(input string) []string {
+		// Recalculate pinned and normal branches fresh each time using renderer's current config
+		currentPinnedBranches := lo.Filter(*renderer.cfg.PinnedBranches, func(s string, _ int) bool {
+			return lo.Contains(renderer.cfg.Branches, s)
+		})
+
+		// Remove pinned branches from normal branches
+		currentNormalBranches := lo.Filter(renderer.cfg.Branches, func(s string, _ int) bool {
+			return !lo.Contains(currentPinnedBranches, s)
+		})
+
+		// Create a fresh slice each time to avoid sharing issues
+		allBranches := make([]string, 0, len(currentPinnedBranches)+len(currentNormalBranches))
+		allBranches = append(allBranches, currentPinnedBranches...)
+		allBranches = append(allBranches, currentNormalBranches...)
+
+		if input == "" {
+			// Return a copy to avoid slice sharing
+			result := make([]string, len(allBranches))
+			copy(result, allBranches)
+			return result
+		}
+
+		// Filter all branches
+		filtered := lo.Filter(allBranches, func(s string, _ int) bool {
+			return strings.Contains(strings.ToLower(s), strings.ToLower(input))
+		})
+
+		// Return deduplicated result
+		return lo.Uniq(filtered)
+	}
+
+	renderer.filter = filter
+	return renderer, nil
 }
 
 func (r *Renderer) Draw() {
@@ -110,7 +132,44 @@ func (r *Renderer) Draw() {
 
 	row := 0
 
-	// 1. Draw current branch at the top
+	// 1. Draw hotkey instructions at the top
+	col := 0
+	orangeStyle := r.NormalStyle.Foreground(tcell.ColorOrange)
+	dimStyle := r.NormalStyle.Dim(true)
+
+	// CTRL+D in orange
+	ctrlD := "CTRL+D"
+	for _, ch := range ctrlD {
+		r.screen.SetContent(col, row, ch, nil, orangeStyle)
+		col++
+	}
+
+	// Rest of first instruction in dimmed text
+	firstRest := ": Pin Selected Branch, "
+	for _, ch := range firstRest {
+		r.screen.SetContent(col, row, ch, nil, dimStyle)
+		col++
+	}
+
+	// CTRL+U in orange
+	ctrlU := "CTRL+U"
+	for _, ch := range ctrlU {
+		r.screen.SetContent(col, row, ch, nil, orangeStyle)
+		col++
+	}
+
+	// Rest of second instruction in dimmed text
+	secondRest := ": Unpin Selected Branch"
+	for _, ch := range secondRest {
+		r.screen.SetContent(col, row, ch, nil, dimStyle)
+		col++
+	}
+	row++
+
+	// 2. Empty line after hotkey instructions
+	row++
+
+	// 3. Draw current branch
 	if r.cfg.CurrentBranch != "" {
 		currentBranchLabel := fmt.Sprintf("checked out: %v", r.cfg.CurrentBranch)
 		for i, ch := range currentBranchLabel {
@@ -119,24 +178,24 @@ func (r *Renderer) Draw() {
 		row++
 	}
 
-	// 2. Empty line after current branch
+	// 4. Empty line after current branch
 	row++
 
-	// 3. Draw input at the next line
+	// 5. Draw input at the next line
 	inputPrompt := fmt.Sprintf("%v: %v", r.searchLabel, r.state.Input)
 	for i, ch := range inputPrompt {
 		r.screen.SetContent(i, row, ch, nil, r.InputStyle)
 	}
 	row++
 
-	// 4. Empty line after input
+	// 6. Empty line after input
 	row++
 
-	// 5. Draw list starting at the next line
+	// 7. Draw list starting at the next line
 	end := min(r.state.WindowStart+r.WindowSize, len(r.state.Branches))
 	for i := r.state.WindowStart; i < end; i++ {
 		item := r.state.Branches[i]
-		isPinned := lo.Contains(r.cfg.PinnedBranches, item)
+		isPinned := lo.Contains(*r.cfg.PinnedBranches, item)
 		lowerItem := strings.ToLower(item)
 		lowerInput := strings.ToLower(r.state.Input)
 		start := strings.Index(lowerItem, lowerInput)
@@ -180,11 +239,14 @@ func (r *Renderer) Draw() {
 			}
 		}
 	}
+
 	r.screen.Show()
 }
 
 type SelectionHandler struct {
 	OnSelect func(string)
+	OnPin    func(string) error
+	OnUnpin  func(string) error
 }
 
 func (r *Renderer) Run(handler SelectionHandler) error {
@@ -219,6 +281,51 @@ func (r *Renderer) Run(handler SelectionHandler) error {
 				r.state.Quit = true
 				if handler.OnSelect != nil {
 					handler.OnSelect(r.state.Branches[r.state.Selected])
+					return nil
+				}
+			}
+		case tcell.KeyCtrlD:
+			// Pin the selected branch
+			if len(r.state.Branches) > 0 && handler.OnPin != nil {
+				selectedBranch := r.state.Branches[r.state.Selected]
+				if err := handler.OnPin(selectedBranch); err != nil {
+					return err
+				}
+				// Update the pinned branches list in the renderer
+				if !lo.Contains(*r.cfg.PinnedBranches, selectedBranch) {
+					*r.cfg.PinnedBranches = append(*r.cfg.PinnedBranches, selectedBranch)
+					// Refresh the branch list and follow the pinned branch
+					r.refreshBranchListWithSelection(selectedBranch, true)
+					r.Draw()
+					return nil
+				}
+			}
+		case tcell.KeyCtrlU:
+			// Unpin the selected branch
+			if len(r.state.Branches) > 0 && handler.OnUnpin != nil {
+				selectedBranch := r.state.Branches[r.state.Selected]
+				if err := handler.OnUnpin(selectedBranch); err != nil {
+					return err
+				}
+				// Update the pinned branches list in the renderer
+				if idx := lo.IndexOf(*r.cfg.PinnedBranches, selectedBranch); idx != -1 {
+					// Create a new slice to avoid memory corruption
+					pinnedBranches := *r.cfg.PinnedBranches
+					newPinnedBranches := make([]string, 0, len(pinnedBranches)-1)
+					newPinnedBranches = append(newPinnedBranches, pinnedBranches[:idx]...)
+					newPinnedBranches = append(newPinnedBranches, pinnedBranches[idx+1:]...)
+					*r.cfg.PinnedBranches = newPinnedBranches
+
+					// Find the next branch to select (stay in position instead of following)
+					var nextBranch string
+					if r.state.Selected+1 < len(r.state.Branches) {
+						nextBranch = r.state.Branches[r.state.Selected+1]
+					} else if r.state.Selected > 0 {
+						nextBranch = r.state.Branches[r.state.Selected-1]
+					}
+					// Refresh the branch list and select the next branch
+					r.refreshBranchListWithSelection(nextBranch, false)
+					r.Draw()
 					return nil
 				}
 			}
@@ -257,9 +364,89 @@ func (r *Renderer) Finish() {
 	r.screen.Fini()
 }
 
+func (r *Renderer) refreshBranchListWithSelection(targetBranch string, followBranch bool) {
+	// Update the filter function to use the current branch configuration
+	filter := func(input string) []string {
+		// Recalculate pinned and normal branches fresh each time
+		currentPinnedBranches := lo.Filter(*r.cfg.PinnedBranches, func(s string, _ int) bool {
+			return lo.Contains(r.cfg.Branches, s)
+		})
+
+		// Remove pinned branches from normal branches
+		currentNormalBranches := lo.Filter(r.cfg.Branches, func(s string, _ int) bool {
+			return !lo.Contains(currentPinnedBranches, s)
+		})
+
+		// Create a fresh slice each time to avoid sharing issues
+		allBranches := make([]string, 0, len(currentPinnedBranches)+len(currentNormalBranches))
+		allBranches = append(allBranches, currentPinnedBranches...)
+		allBranches = append(allBranches, currentNormalBranches...)
+
+		if input == "" {
+			// Return a copy to avoid slice sharing
+			result := make([]string, len(allBranches))
+			copy(result, allBranches)
+			return result
+		}
+
+		// Filter all branches
+		filtered := lo.Filter(allBranches, func(s string, _ int) bool {
+			return strings.Contains(strings.ToLower(s), strings.ToLower(input))
+		})
+
+		// Return deduplicated result
+		return lo.Uniq(filtered)
+	}
+
+	// Update the filter function and apply it
+	r.filter = filter
+	r.state.Branches = filter(r.state.Input)
+
+	// Handle selection based on the followBranch parameter
+	if followBranch && targetBranch != "" {
+		// Try to select the target branch (follow behavior)
+		if newIndex := lo.IndexOf(r.state.Branches, targetBranch); newIndex != -1 {
+			r.state.Selected = newIndex
+		}
+	} else if !followBranch && targetBranch != "" {
+		// Try to select the target branch, but if it doesn't exist, stay at current position
+		if newIndex := lo.IndexOf(r.state.Branches, targetBranch); newIndex != -1 {
+			r.state.Selected = newIndex
+		}
+		// If target branch doesn't exist, keep current selection position if possible
+	}
+
+	// Ensure the selected index is still valid
+	if r.state.Selected >= len(r.state.Branches) {
+		r.state.Selected = len(r.state.Branches) - 1
+	}
+	if r.state.Selected < 0 {
+		r.state.Selected = 0
+	}
+
+	// Update window position to keep selected item visible
+	if r.state.Selected < r.state.WindowStart {
+		r.state.WindowStart = r.state.Selected
+	}
+	if r.state.Selected >= r.state.WindowStart+r.WindowSize {
+		r.state.WindowStart = r.state.Selected - r.WindowSize + 1
+	}
+	if r.state.WindowStart < 0 {
+		r.state.WindowStart = 0
+	}
+}
+
 // min is kept here for local use
 func min(a, b int) int {
 	if a < b {
+		return a
+	}
+	return b
+}
+
+// max is kept here for local use
+func max(a, b int) int {
+	if a > b {
 		return a
 	}
 	return b

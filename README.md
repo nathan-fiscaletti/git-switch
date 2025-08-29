@@ -1,5 +1,3 @@
-https://github.com/user-attachments/assets/d22fadbd-bf6e-412e-80be-f2218536642c
-
 # git-switch
 
 A fast, interactive terminal UI for switching between git branches. Built with [tcell](https://github.com/gdamore/tcell) for a smooth, cross-platform experience.
@@ -46,6 +44,8 @@ sw
 - Use **Up/Down** arrows to select.
 - Press **Enter** to checkout the selected branch.
 - Press **Esc** or **Ctrl+C** to exit.
+- Press **CTRL+D** to pin the currently selected branch.
+- Press **CTRL+U** to unpin the currently selected branch.
 
 ### Git Checkout Override
 
@@ -128,30 +128,66 @@ The interactive branch selector is exposed in the [`pkg`](./pkg) package.
 package main
 
 import (
+    "fmt"
     sw "github.com/nathan-fiscaletti/git-switch/pkg"
 )
 
 func main() {
+    // Your branch data
+    currentBranch := "main"
+    branches := []string{"main", "develop", "feature/new-api", "bugfix/issue-123"}
+    pinnedBranches := []string{"main", "develop"}
+
     branchSelector, err := sw.NewBranchSelector(sw.BranchSelectorArguments{
         CurrentBranch:      currentBranch,
         Branches:           branches,
-        PinnedBranches:     pinnedBranches,
+        PinnedBranches:     &pinnedBranches, // Pass as pointer for shared state
         PinnedBranchPrefix: "★",
         WindowSize:         10,
         SearchLabel:        "search branch",
+        
+        // Optional: Handle pin/unpin operations
+        OnPinBranch: func(branch string) error {
+            // Implement your own storage logic
+            fmt.Printf("Pinning branch: %s\n", branch)
+            // Save to database, file, etc.
+            return nil
+        },
+        OnUnpinBranch: func(branch string) error {
+            // Implement your own storage logic
+            fmt.Printf("Unpinning branch: %s\n", branch)
+            // Remove from database, file, etc.
+            return nil
+        },
     })
     if err != nil {
         panic(err)
     }
 
-    b, err := branchSelector.PickBranch()
+    // Show the interactive selector
+    selectedBranch, err := branchSelector.PickBranch()
     if err != nil {
         panic(err)
     }
 
-    // ... use b ...
+    if selectedBranch != "" {
+        fmt.Printf("Selected branch: %s\n", selectedBranch)
+        // Process the selected branch...
+    }
 }
 ```
+
+#### Interactive Features
+
+The branch selector includes interactive hotkeys:
+
+- **CTRL+D**: Pin the currently selected branch
+- **CTRL+U**: Unpin the currently selected branch
+- **Up/Down**: Navigate branches
+- **Enter**: Select branch
+- **Esc/Ctrl+C**: Exit
+
+Pin/unpin operations automatically call your `OnPinBranch` and `OnUnpinBranch` callbacks, allowing you to integrate with any storage backend (database, files, APIs, etc.).
 
 ## Configuration
 
