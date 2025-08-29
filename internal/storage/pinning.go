@@ -69,11 +69,12 @@ func Unpin(branch string) (*Config, error) {
 		return nil, ErrBranchNotPinned
 	}
 
-	// Remove the pinned branch
-	cfg.Repositories[i].PinnedBranches = append(
-		cfg.Repositories[i].PinnedBranches[:j],
-		cfg.Repositories[i].PinnedBranches[j+1:]...,
-	)
+	// Remove the pinned branch using safe slice creation
+	pinnedBranches := cfg.Repositories[i].PinnedBranches
+	newPinnedBranches := make([]string, 0, len(pinnedBranches)-1)
+	newPinnedBranches = append(newPinnedBranches, pinnedBranches[:j]...)
+	newPinnedBranches = append(newPinnedBranches, pinnedBranches[j+1:]...)
+	cfg.Repositories[i].PinnedBranches = newPinnedBranches
 
 	return cfg, write(cfg)
 }
